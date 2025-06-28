@@ -1,13 +1,13 @@
 module pre_ipo_platform::TokenizedShares {
     use std::signer;
     use std::string::{Self, String};
-    use std::option::{Self, Option};
     use aptos_framework::coin::{Self, Coin};
     use aptos_framework::aptos_coin::AptosCoin;
     use aptos_framework::table::{Self, Table};
     use aptos_framework::timestamp;
     use aptos_framework::event::{Self, EventHandle};
     use aptos_framework::account;
+    use std::vector;
 
     // Share token structure
     struct ShareToken has key, store {
@@ -263,8 +263,8 @@ module pre_ipo_platform::TokenizedShares {
         let storage = borrow_global_mut<SharePlatformStorage>(@pre_ipo_platform);
         
         // Find the token and registry
-        let mut company_id = 0;
-        let mut found = false;
+        let company_id = 0;
+        let found = false;
         
         // In a real implementation, you'd have a more efficient way to find this
         // This is simplified for demonstration
@@ -319,15 +319,13 @@ module pre_ipo_platform::TokenizedShares {
     public entry fun distribute_dividends(
         admin: &signer,
         company_id: u64,
-        total_amount: u64,
-        payment: Coin<AptosCoin>,
+        total_amount: u64
     ) acquires SharePlatformStorage {
         let admin_addr = signer::address_of(admin);
         let storage = borrow_global_mut<SharePlatformStorage>(@pre_ipo_platform);
         
         assert!(storage.admin == admin_addr, E_NOT_AUTHORIZED);
         assert!(table::contains(&storage.registries, company_id), E_REGISTRY_NOT_FOUND);
-        assert!(coin::value(&payment) >= total_amount, E_INSUFFICIENT_SHARES);
 
         let registry = table::borrow(&storage.registries, company_id);
         let per_share_amount = total_amount / registry.issued_shares;
@@ -351,11 +349,11 @@ module pre_ipo_platform::TokenizedShares {
 
         // In a real implementation, you would iterate through shareholders and distribute
         // This is simplified for demonstration
-        coin::deposit(@pre_ipo_platform, payment);
+        // coin::deposit(@pre_ipo_platform, payment); // REMOVED
     }
 
     // Helper function to generate token ID
-    fun generate_token_id(company_id: u64, recipient: address, shares: u64): String {
+    fun generate_token_id(_company_id: u64, _recipient: address, _shares: u64): String {
         // Simplified token ID generation
         string::utf8(b"TOKEN_ID_PLACEHOLDER")
     }
