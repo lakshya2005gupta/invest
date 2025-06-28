@@ -157,7 +157,6 @@ module pre_ipo_platform::PreIPOTokenization {
         investor: &signer,
         company_id: u64,
         tokens: u64,
-        payment: Coin<AptosCoin>,
     ) acquires PlatformStorage {
         let investor_addr = signer::address_of(investor);
         let storage = borrow_global_mut<PlatformStorage>(@pre_ipo_platform);
@@ -172,7 +171,6 @@ module pre_ipo_platform::PreIPOTokenization {
         let min_tokens = (company.min_investment * 100000000) / company.token_price; // Scale up
         
         assert!(tokens >= min_tokens, E_MINIMUM_INVESTMENT_NOT_MET);
-        assert!(coin::value(&payment) >= required_amount, E_INVALID_AMOUNT);
 
         // Calculate platform fee
         let fee_amount = (required_amount * storage.platform_fee) / 10000;
@@ -212,9 +210,6 @@ module pre_ipo_platform::PreIPOTokenization {
 
         vector::push_back(&mut portfolio.investment_history, investment);
         storage.total_volume = storage.total_volume + net_amount;
-
-        // Transfer payment to platform (simplified - in production, split between platform and company)
-        coin::deposit(@pre_ipo_platform, payment);
 
         // Emit event
         event::emit_event(&mut storage.investment_events, InvestmentEvent {
