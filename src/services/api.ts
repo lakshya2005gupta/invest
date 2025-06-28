@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://invest360-wjmn.onrender.com/api';
 
 // API service class with smart caching support
 class ApiService {
