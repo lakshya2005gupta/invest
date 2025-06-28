@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, User, Menu, X, TrendingUp, PieChart, BarChart3, Wallet, Building2, Coins, RefreshCw } from 'lucide-react';
+import {
+  User,
+  Menu,
+  X,
+  TrendingUp,
+  PieChart,
+  BarChart3,
+  Wallet,
+  Building2,
+  Coins,
+  RefreshCw,
+} from 'lucide-react';
 import { apiService } from '../services/api';
 import WalletButton from './WalletButton';
 
@@ -21,7 +32,6 @@ const Header = () => {
     { name: 'Token Portfolio', href: '/token-portfolio', icon: Coins },
   ];
 
-  // Load cache stats on component mount
   useEffect(() => {
     loadCacheStats();
   }, []);
@@ -40,7 +50,6 @@ const Header = () => {
     try {
       await apiService.refreshCache();
       await loadCacheStats();
-      // Reload current page data
       window.location.reload();
     } catch (error) {
       console.error('Error refreshing cache:', error);
@@ -85,6 +94,8 @@ const Header = () => {
             })}
           </nav>
 
+          {/* Refresh, Wallet, Profile */}
+          <div className="flex items-center space-x-4">
             {/* Refresh Button */}
             <button
               onClick={handleRefresh}
