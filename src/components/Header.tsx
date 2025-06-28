@@ -29,6 +29,7 @@ const Header = () => {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Portfolio', href: '/portfolio', icon: Wallet },
     { name: 'Token Portfolio', href: '/token-portfolio', icon: Coins },
+    { name: 'AiAgent', href: 'http://localhost:8501/', icon: Coins },
   ];
 
   const investmentOptions = [
