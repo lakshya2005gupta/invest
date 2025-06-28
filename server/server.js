@@ -1,6 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');
+require('dotenv').config();
+
+// Import configuration
+const config = require('./config/environment');
 
 // Import route modules
 const stockRoutes = require('./routes/stocks');
@@ -18,11 +22,23 @@ const analyticsRoutes = require('./routes/analytics');
 const priceUpdateService = require('./services/priceUpdateService');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = config.port;
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: config.corsOrigins,
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging middleware
+if (config.nodeEnv === 'development') {
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+  });
+}
 
 // Routes
 app.use('/api/stocks', stockRoutes);
@@ -43,6 +59,7 @@ app.get('/api/health', (req, res) => {
     message: 'Invest 360 API is running',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
+    environment: config.nodeEnv,
     endpoints: {
       stocks: '/api/stocks',
       mutualFunds: '/api/mutual-funds',
@@ -65,7 +82,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     success: false,
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    error: config.nodeEnv === 'development' ? err.message : 'Internal server error'
   });
 });
 
@@ -79,6 +96,7 @@ app.use('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Invest 360 Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${config.nodeEnv}`);
   console.log(`📊 API Health Check: http://localhost:${PORT}/api/health`);
   console.log(`💰 Stocks API: http://localhost:${PORT}/api/stocks`);
   console.log(`📈 Mutual Funds API: http://localhost:${PORT}/api/mutual-funds`);
