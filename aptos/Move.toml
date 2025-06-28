@@ -1,0 +1,16 @@
+[package]
+name = "PreIPOPlatform"
+version = "1.0.0"
+authors = ["Invest360 Team"]
+
+[addresses]
+pre_ipo_platform = "_"
+
+[dev-addresses]
+pre_ipo_platform = "0x1"
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework", rev = "mainnet" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib", rev = "mainnet" }
+
+[dev-dependencies]

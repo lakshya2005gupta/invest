@@ -1,0 +1,20 @@
+{
+  "name": "invest-360-aptos-contracts",
+  "version": "1.0.0",
+  "description": "Aptos smart contracts for Pre-IPO tokenization platform",
+  "scripts": {
+    "compile": "aptos move compile",
+    "test": "aptos move test",
+    "deploy": "ts-node scripts/deploy.ts",
+    "init": "aptos init --network testnet",
+    "fund": "aptos account fund-with-faucet --account default"
+  },
+  "dependencies": {
+    "aptos": "^1.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
