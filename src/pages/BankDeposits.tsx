@@ -1,37 +1,55 @@
 import React, { useState } from 'react';
 import { Search, Filter, Building2, Calculator, TrendingUp, Shield, Clock } from 'lucide-react';
+import { useBankDeposits } from '../hooks/useApi';
+import BankDepositModal from '../components/BankDepositModal';
 
 const BankDeposits = () => {
   const [activeTab, setActiveTab] = useState('fd');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDeposit, setSelectedDeposit] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: depositsData, loading, error } = useBankDeposits();
 
-  const fdRates = [
-    { bank: 'HDFC Bank', rate: '7.25%', minAmount: '₹10,000', tenure: '1-5 years', rating: 'AAA', features: ['Auto-renewal', 'Loan against FD'] },
-    { bank: 'ICICI Bank', rate: '7.15%', minAmount: '₹10,000', tenure: '1-5 years', rating: 'AAA', features: ['Flexible tenure', 'Online booking'] },
-    { bank: 'SBI', rate: '6.80%', minAmount: '₹1,000', tenure: '1-10 years', rating: 'AAA', features: ['Senior citizen benefits', 'Tax saving'] },
-    { bank: 'Axis Bank', rate: '7.35%', minAmount: '₹10,000', tenure: '1-5 years', rating: 'AA+', features: ['High returns', 'Quick processing'] },
-    { bank: 'Kotak Mahindra Bank', rate: '7.40%', minAmount: '₹25,000', tenure: '1-5 years', rating: 'AA+', features: ['Premium rates', 'Digital FD'] },
-    { bank: 'IndusInd Bank', rate: '7.50%', minAmount: '₹10,000', tenure: '1-5 years', rating: 'AA', features: ['Highest rates', 'Flexible options'] },
-  ];
-
-  const rdRates = [
-    { bank: 'HDFC Bank', rate: '6.75%', minAmount: '₹100', tenure: '1-10 years', rating: 'AAA', features: ['Monthly deposits', 'Auto-debit'] },
-    { bank: 'ICICI Bank', rate: '6.65%', minAmount: '₹100', tenure: '1-10 years', rating: 'AAA', features: ['Flexible deposits', 'Online management'] },
-    { bank: 'SBI', rate: '6.30%', minAmount: '₹10', tenure: '1-20 years', rating: 'AAA', features: ['Low minimum', 'Long tenure'] },
-    { bank: 'Axis Bank', rate: '6.85%', minAmount: '₹500', tenure: '1-10 years', rating: 'AA+', features: ['Good returns', 'Easy setup'] },
-    { bank: 'Kotak Mahindra Bank', rate: '6.90%', minAmount: '₹100', tenure: '1-10 years', rating: 'AA+', features: ['Premium rates', 'Digital RD'] },
-    { bank: 'IndusInd Bank', rate: '7.00%', minAmount: '₹100', tenure: '1-10 years', rating: 'AA', features: ['Best rates', 'Flexible tenure'] },
-  ];
-
-  const currentRates = activeTab === 'fd' ? fdRates : rdRates;
-  const filteredRates = currentRates.filter(rate => 
-    rate.bank.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleBookNow = (deposit: any) => {
+    setSelectedDeposit(deposit);
+    setIsModalOpen(true);
+  };
 
   const tabs = [
     { id: 'fd', name: 'Fixed Deposits', icon: Building2 },
     { id: 'rd', name: 'Recurring Deposits', icon: TrendingUp },
   ];
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-96 mb-8"></div>
+          <div className="space-y-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center text-red-600">
+          <p>Error loading bank deposits data. Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const currentRates = activeTab === 'fd' ? depositsData?.fixedDeposits || [] : depositsData?.recurringDeposits || [];
+  const filteredRates = currentRates.filter((rate: any) => 
+    rate.bank.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -137,7 +155,7 @@ const BankDeposits = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredRates.map((rate, index) => (
+              {filteredRates.map((rate: any, index: number) => (
                 <tr key={index} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
@@ -170,7 +188,13 @@ const BankDeposits = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                    <button 
+                      onClick={() => handleBookNow({
+                        ...rate,
+                        type: activeTab.toUpperCase() as 'FD' | 'RD'
+                      })}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    >
                       Book Now
                     </button>
                   </td>
@@ -205,6 +229,18 @@ const BankDeposits = () => {
           <p className="text-gray-600">Book FDs and RDs online instantly with digital documentation</p>
         </div>
       </div>
+
+      {/* Bank Deposit Modal */}
+      {selectedDeposit && (
+        <BankDepositModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedDeposit(null);
+          }}
+          deposit={selectedDeposit}
+        />
+      )}
     </div>
   );
 };

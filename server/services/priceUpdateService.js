@@ -14,6 +14,12 @@ class PriceUpdateService {
     this.lastUpdateTime = null;
     this.updateInterval = 60 * 60 * 1000; // 1 hour
     this.forceUpdateRequests = new Set();
+    this.updateStats = {
+      totalUpdates: 0,
+      successfulUpdates: 0,
+      failedUpdates: 0,
+      lastError: null
+    };
   }
 
   // Helper function to simulate price fluctuations
@@ -25,11 +31,14 @@ class PriceUpdateService {
   // Function to fetch real stock prices from Yahoo Finance
   async fetchRealStockPrice(symbol) {
     try {
-      const quote = await yahooFinance.quote(symbol);
+      const quote = await yahooFinance.quote(symbol, {
+        fields: ['regularMarketPrice', 'regularMarketChange', 'regularMarketChangePercent']
+      });
+      
       return {
-        price: quote.regularMarketPrice,
-        change: quote.regularMarketChange,
-        changePercent: quote.regularMarketChangePercent
+        price: quote.regularMarketPrice || quote.price,
+        change: quote.regularMarketChange || 0,
+        changePercent: quote.regularMarketChangePercent || 0
       };
     } catch (error) {
       console.error(`Error fetching real price for ${symbol}:`, error.message);
@@ -41,7 +50,7 @@ class PriceUpdateService {
     console.log('Updating stock prices...');
     const cacheKey = 'stocks_data';
     
-    // Check if we have cached data
+    // Check if we have cached data and should use it
     const cachedStocks = cacheService.get(cacheKey);
     if (cachedStocks && !this.shouldForceUpdate()) {
       console.log(`Using cached stock data (${cacheService.getCacheAge(cacheKey)} minutes old)`);
@@ -50,11 +59,15 @@ class PriceUpdateService {
 
     const stocks = stocksData.getStocks();
     const updatedStocks = [];
+    let successCount = 0;
+    let failCount = 0;
 
     for (let stock of stocks) {
       try {
+        // Try to get real data first
         const realData = await this.fetchRealStockPrice(stock.symbol);
-        if (realData) {
+        
+        if (realData && realData.price) {
           const updatedStock = {
             ...stock,
             price: realData.price,
@@ -64,6 +77,7 @@ class PriceUpdateService {
           };
           stocksData.updateStock(stock.id, updatedStock);
           updatedStocks.push(updatedStock);
+          successCount++;
         } else {
           // Fallback to simulation
           const oldPrice = stock.price;
@@ -79,13 +93,17 @@ class PriceUpdateService {
           };
           stocksData.updateStock(stock.id, updatedStock);
           updatedStocks.push(updatedStock);
+          failCount++;
         }
       } catch (error) {
         console.error(`Error updating stock ${stock.symbol}:`, error.message);
         updatedStocks.push(stock);
+        failCount++;
       }
     }
 
+    console.log(`Stock update complete: ${successCount} real prices, ${failCount} simulated`);
+    
     // Cache the updated data
     cacheService.set(cacheKey, updatedStocks);
     return updatedStocks;
@@ -95,7 +113,7 @@ class PriceUpdateService {
     console.log('Updating mutual fund NAVs...');
     const cacheKey = 'mutual_funds_data';
     
-    // Check if we have cached data
+    // Check if we have cached data and should use it
     const cachedFunds = cacheService.get(cacheKey);
     if (cachedFunds && !this.shouldForceUpdate()) {
       console.log(`Using cached mutual fund data (${cacheService.getCacheAge(cacheKey)} minutes old)`);
@@ -104,6 +122,8 @@ class PriceUpdateService {
 
     try {
       const currentFunds = mutualFundsData.getMutualFunds();
+      console.log(`Updating NAVs for ${currentFunds.length} mutual funds...`);
+      
       const updatedFunds = await amfiService.updateAllFundsNAV(currentFunds);
       
       // Update each fund individually
@@ -113,10 +133,15 @@ class PriceUpdateService {
       
       // Cache the updated data
       cacheService.set(cacheKey, updatedFunds);
-      console.log('Successfully updated mutual fund NAVs');
+      console.log('Successfully updated mutual fund NAVs from AMFI');
+      
+      this.updateStats.successfulUpdates++;
       return updatedFunds;
+      
     } catch (error) {
       console.error('Error updating mutual fund NAVs:', error.message);
+      this.updateStats.failedUpdates++;
+      this.updateStats.lastError = error.message;
       
       // Fallback to simulation if AMFI fails
       console.log('Falling back to simulated NAV updates...');
@@ -130,7 +155,8 @@ class PriceUpdateService {
           nav: newNav,
           change: change,
           changePercent: `${change >= 0 ? '+' : ''}${((change / oldNav) * 100).toFixed(2)}%`,
-          lastUpdated: new Date()
+          lastUpdated: new Date(),
+          navDate: new Date().toISOString().split('T')[0]
         };
         
         mutualFundsData.updateMutualFund(fund.id, updatedFund);
@@ -214,14 +240,23 @@ class PriceUpdateService {
     const indices = marketData.getMarketIndices();
     
     const updatedIndices = indices.map(index => {
-      const oldValue = parseFloat(index.value.replace(/[,$]/g, ''));
+      // Handle different value formats
+      let oldValue;
+      if (typeof index.value === 'string') {
+        oldValue = parseFloat(index.value.replace(/[,$]/g, ''));
+      } else {
+        oldValue = index.value;
+      }
+      
       const newValue = this.simulatePriceChange(oldValue, 0.005);
       const change = newValue - oldValue;
       const changePercent = (change / oldValue) * 100;
       
       return {
         ...index,
-        value: newValue.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+        value: index.name.includes('APT') || index.name.includes('USD') 
+          ? `$${newValue.toFixed(2)}`
+          : newValue.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
         change: `${change >= 0 ? '+' : ''}${change.toFixed(2)}`,
         percent: `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
         positive: change >= 0
@@ -258,27 +293,36 @@ class PriceUpdateService {
     // Check if we need to update based on time
     const now = Date.now();
     if (!forceUpdate && this.lastUpdateTime && (now - this.lastUpdateTime) < this.updateInterval) {
-      console.log(`Skipping update, last update was ${Math.floor((now - this.lastUpdateTime) / (1000 * 60))} minutes ago`);
+      const minutesLeft = Math.ceil((this.updateInterval - (now - this.lastUpdateTime)) / (1000 * 60));
+      console.log(`Skipping update, next scheduled update in ${minutesLeft} minutes`);
       return;
     }
 
     this.isUpdating = true;
-    console.log('Starting price update at:', new Date().toISOString());
+    this.updateStats.totalUpdates++;
+    console.log(`Starting ${forceUpdate ? 'forced' : 'scheduled'} price update at:`, new Date().toISOString());
 
     try {
-      await Promise.all([
+      const updatePromises = [
         this.updateStockPrices(),
         this.updateMutualFundNAVs(),
         this.updateETFPrices(),
         this.updatePreIPOPrices(),
         this.updateMarketIndices()
-      ]);
+      ];
+
+      await Promise.allSettled(updatePromises);
       
       this.lastUpdateTime = now;
       this.clearForceUpdateRequests();
+      
       console.log('Full price update completed successfully');
+      console.log('Update stats:', this.updateStats);
+      
     } catch (error) {
       console.error('Error during price update:', error.message);
+      this.updateStats.failedUpdates++;
+      this.updateStats.lastError = error.message;
     } finally {
       this.isUpdating = false;
     }
@@ -290,7 +334,7 @@ class PriceUpdateService {
     // Initial update
     this.performFullUpdate(true);
     
-    // Schedule updates every hour instead of every 30 seconds
+    // Schedule updates every hour
     cron.schedule('0 * * * *', () => {
       console.log('Scheduled hourly update triggered');
       this.performFullUpdate();
@@ -300,13 +344,34 @@ class PriceUpdateService {
     cron.schedule('0 */2 * * *', async () => {
       try {
         console.log('Refreshing AMFI data cache...');
-        await amfiService.fetchAMFIData();
+        await amfiService.forceRefresh();
       } catch (error) {
         console.error('Error refreshing AMFI data:', error.message);
       }
     });
 
+    // Schedule daily cache cleanup at midnight
+    cron.schedule('0 0 * * *', () => {
+      console.log('Performing daily cache cleanup...');
+      cacheService.clear();
+    });
+
     console.log('Smart caching enabled - updates every hour or on user refresh');
+    console.log('AMFI data refreshes every 2 hours');
+    console.log('Cache cleanup runs daily at midnight');
+  }
+
+  // Get service statistics
+  getServiceStats() {
+    return {
+      ...this.updateStats,
+      isUpdating: this.isUpdating,
+      lastUpdateTime: this.lastUpdateTime,
+      nextUpdateTime: this.lastUpdateTime ? this.lastUpdateTime + this.updateInterval : null,
+      forceUpdateRequests: this.forceUpdateRequests.size,
+      amfiStats: amfiService.getCacheStats(),
+      cacheStats: cacheService.getStats()
+    };
   }
 
   // Get cache statistics
