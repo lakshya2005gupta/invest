@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Search, User, Menu, X, TrendingUp, PieChart, BarChart3, Wallet, Building2, Coins, RefreshCw } from 'lucide-react';
 import { apiService } from '../services/api';
+import WalletButton from './WalletButton';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,6 +18,7 @@ const Header = () => {
     { name: 'Bank Deposits', href: '/bank-deposits', icon: Building2 },
     { name: 'Pre-IPO', href: '/pre-ipo', icon: Coins },
     { name: 'Portfolio', href: '/portfolio', icon: Wallet },
+    { name: 'Token Portfolio', href: '/token-portfolio', icon: Coins },
   ];
 
   // Load cache stats on component mount
@@ -109,9 +111,7 @@ const Header = () => {
             </button>
 
             {/* Wallet Connect Button */}
-            <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-sm">
-              Connect Wallet
-            </button>
+            <WalletButton />
 
             {/* Profile Dropdown */}
             <div className="relative">
@@ -129,6 +129,12 @@ const Header = () => {
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     Portfolio
+                  </Link>
+                  <Link
+                    to="/token-portfolio"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Token Portfolio
                   </Link>
                   <Link
                     to="/orders"

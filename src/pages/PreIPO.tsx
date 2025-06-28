@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Filter, Coins, TrendingUp, Users, Calendar, Shield, Zap, Plus } from 'lucide-react';
 import { usePreIPO } from '../hooks/useApi';
-import InvestmentModal from '../components/InvestmentModal';
+import PreIPOInvestmentModal from '../components/PreIPOInvestmentModal';
 
 const PreIPO = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,12 +19,7 @@ const PreIPO = () => {
   ];
 
   const handleInvestClick = (company: any) => {
-    setSelectedCompany({
-      name: company.name,
-      type: 'pre-ipo' as const,
-      tokenPrice: company.tokenPrice,
-      minInvestment: parseFloat(company.minInvestment.replace(/[$,]/g, ''))
-    });
+    setSelectedCompany(company);
     setIsModalOpen(true);
   };
 
@@ -194,6 +189,12 @@ const PreIPO = () => {
                 <Plus className="h-4 w-4" />
                 <span>Invest Now</span>
               </button>
+
+              {/* Aptos Badge */}
+              <div className="mt-3 flex items-center justify-center space-x-2 text-xs text-gray-500">
+                <Shield className="h-3 w-3" />
+                <span>Secured by Aptos Blockchain</span>
+              </div>
             </div>
           </div>
         ))}
@@ -236,13 +237,13 @@ const PreIPO = () => {
 
       {/* Investment Modal */}
       {selectedCompany && (
-        <InvestmentModal
+        <PreIPOInvestmentModal
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false);
             setSelectedCompany(null);
           }}
-          investment={selectedCompany}
+          company={selectedCompany}
         />
       )}
     </div>

@@ -7,11 +7,12 @@ import MutualFunds from './pages/MutualFunds';
 import Portfolio from './pages/Portfolio';
 import BankDeposits from './pages/BankDeposits';
 import PreIPO from './pages/PreIPO';
-import AptosWalletProvider from './components/AptosWalletProvider';
+import TokenPortfolio from './pages/TokenPortfolio';
+import { WalletProvider } from './contexts/WalletContext';
 
 function App() {
   return (
-    <AptosWalletProvider>
+    <WalletProvider>
       <Router>
         <div className="min-h-screen bg-gray-50">
           <Header />
@@ -22,10 +23,11 @@ function App() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/bank-deposits" element={<BankDeposits />} />
             <Route path="/pre-ipo" element={<PreIPO />} />
+            <Route path="/token-portfolio" element={<TokenPortfolio />} />
           </Routes>
         </div>
       </Router>
-    </AptosWalletProvider>
+    </WalletProvider>
   );
 }
 
