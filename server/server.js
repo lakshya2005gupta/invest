@@ -17,9 +17,11 @@ const marketRoutes = require('./routes/market');
 const calculatorRoutes = require('./routes/calculators');
 const searchRoutes = require('./routes/search');
 const analyticsRoutes = require('./routes/analytics');
+const cacheRoutes = require('./routes/cache');
 
 // Import services
 const priceUpdateService = require('./services/priceUpdateService');
+const cacheService = require('./services/cacheService');
 
 const app = express();
 const PORT = config.port;
@@ -40,6 +42,20 @@ if (config.nodeEnv === 'development') {
   });
 }
 
+// Cache refresh middleware for user requests
+app.use((req, res, next) => {
+  // Check if this is a data request that might need fresh data
+  const dataRoutes = ['/api/stocks', '/api/mutual-funds', '/api/etfs', '/api/pre-ipo', '/api/market-indices'];
+  const isDataRequest = dataRoutes.some(route => req.path.startsWith(route));
+  
+  if (isDataRequest && req.headers['cache-control'] === 'no-cache') {
+    // User refreshed the page, request force update
+    priceUpdateService.requestForceUpdate(req.ip);
+  }
+  
+  next();
+});
+
 // Routes
 app.use('/api/stocks', stockRoutes);
 app.use('/api/mutual-funds', mutualFundRoutes);
@@ -51,15 +67,23 @@ app.use('/api/market-indices', marketRoutes);
 app.use('/api/calculate', calculatorRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/cache', cacheRoutes);
 
-// Health check
+// Health check with cache info
 app.get('/api/health', (req, res) => {
+  const cacheStats = cacheService.getStats();
+  
   res.json({
     success: true,
-    message: 'Invest 360 API is running',
+    message: 'Invest 360 API is running with smart caching',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     environment: config.nodeEnv,
+    cache: {
+      enabled: true,
+      entries: cacheStats.totalEntries,
+      updateInterval: '1 hour'
+    },
     endpoints: {
       stocks: '/api/stocks',
       mutualFunds: '/api/mutual-funds',
@@ -68,12 +92,13 @@ app.get('/api/health', (req, res) => {
       preIPO: '/api/pre-ipo',
       portfolio: '/api/portfolio/:pan',
       search: '/api/search?q=query',
-      analytics: '/api/analytics/overview'
+      analytics: '/api/analytics/overview',
+      cache: '/api/cache/stats'
     }
   });
 });
 
-// Start price update service
+// Start smart caching price update service
 priceUpdateService.startPriceUpdates();
 
 // Error handling middleware
@@ -97,6 +122,7 @@ app.use('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Invest 360 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${config.nodeEnv}`);
+  console.log(`⚡ Smart Caching: Enabled (1 hour intervals)`);
   console.log(`📊 API Health Check: http://localhost:${PORT}/api/health`);
   console.log(`💰 Stocks API: http://localhost:${PORT}/api/stocks`);
   console.log(`📈 Mutual Funds API: http://localhost:${PORT}/api/mutual-funds`);
@@ -105,4 +131,5 @@ app.listen(PORT, () => {
   console.log(`📱 Portfolio API: http://localhost:${PORT}/api/portfolio/DEMO123456`);
   console.log(`🔍 Search API: http://localhost:${PORT}/api/search?q=reliance`);
   console.log(`📊 Analytics API: http://localhost:${PORT}/api/analytics/overview`);
+  console.log(`🗄️ Cache Stats: http://localhost:${PORT}/api/cache/stats`);
 });

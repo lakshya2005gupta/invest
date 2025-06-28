@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, User, Menu, X, TrendingUp, PieChart, BarChart3, Wallet, Building2, Coins } from 'lucide-react';
+import { Search, User, Menu, X, TrendingUp, PieChart, BarChart3, Wallet, Building2, Coins, RefreshCw } from 'lucide-react';
+import { apiService } from '../services/api';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [cacheStats, setCacheStats] = useState<any>(null);
   const location = useLocation();
 
   const navigation = [
@@ -15,6 +18,34 @@ const Header = () => {
     { name: 'Pre-IPO', href: '/pre-ipo', icon: Coins },
     { name: 'Portfolio', href: '/portfolio', icon: Wallet },
   ];
+
+  // Load cache stats on component mount
+  useEffect(() => {
+    loadCacheStats();
+  }, []);
+
+  const loadCacheStats = async () => {
+    try {
+      const response = await apiService.getCacheStats();
+      setCacheStats(response.data);
+    } catch (error) {
+      console.error('Error loading cache stats:', error);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await apiService.refreshCache();
+      await loadCacheStats();
+      // Reload current page data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error refreshing cache:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -66,6 +97,17 @@ const Header = () => {
               />
             </div>
 
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center space-x-1 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors text-sm"
+              title={`Refresh data${cacheStats ? ` (${cacheStats.totalEntries} cached items)` : ''}`}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+
             {/* Wallet Connect Button */}
             <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-sm">
               Connect Wallet
@@ -100,6 +142,11 @@ const Header = () => {
                   >
                     Profile Settings
                   </Link>
+                  {cacheStats && (
+                    <div className="px-4 py-2 text-xs text-gray-500 border-t">
+                      Cache: {cacheStats.totalEntries} items
+                    </div>
+                  )}
                   <hr className="my-1" />
                   <button className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
                     Sign Out
@@ -146,6 +193,14 @@ const Header = () => {
                 </Link>
               );
             })}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 w-full"
+            >
+              <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>Refresh Data</span>
+            </button>
           </div>
         </div>
       )}

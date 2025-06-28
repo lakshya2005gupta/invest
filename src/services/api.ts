@@ -1,14 +1,21 @@
 const API_BASE_URL = 'http://localhost:5000/api';
 
-// API service class
+// API service class with smart caching support
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      };
+
+      // Add cache control header for force refresh
+      if (this.shouldForceRefresh()) {
+        headers['Cache-Control'] = 'no-cache';
+      }
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
+        headers,
         ...options,
       });
 
@@ -22,6 +29,24 @@ class ApiService {
       console.error(`API request failed for ${endpoint}:`, error);
       throw error;
     }
+  }
+
+  // Check if we should force refresh (e.g., user manually refreshed)
+  private shouldForceRefresh(): boolean {
+    // Check if page was refreshed recently (within last 5 seconds)
+    const lastRefresh = sessionStorage.getItem('lastRefresh');
+    const now = Date.now();
+    
+    if (lastRefresh && (now - parseInt(lastRefresh)) < 5000) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  // Mark page as refreshed
+  markPageRefresh(): void {
+    sessionStorage.setItem('lastRefresh', Date.now().toString());
   }
 
   // Stocks API
@@ -96,6 +121,18 @@ class ApiService {
     return this.request('/analytics/overview');
   }
 
+  // Cache API
+  async getCacheStats() {
+    return this.request('/cache/stats');
+  }
+
+  async refreshCache() {
+    return this.request('/cache/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ clientId: this.getClientId() }),
+    });
+  }
+
   // Calculators API
   async calculateFDMaturity(principal: number, rate: number, tenure: number) {
     return this.request('/calculate/fd-maturity', {
@@ -115,7 +152,25 @@ class ApiService {
   async healthCheck() {
     return this.request('/health');
   }
+
+  // Get unique client ID
+  private getClientId(): string {
+    let clientId = sessionStorage.getItem('clientId');
+    if (!clientId) {
+      clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionStorage.setItem('clientId', clientId);
+    }
+    return clientId;
+  }
 }
 
 export const apiService = new ApiService();
+
+// Mark page refresh on load
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    apiService.markPageRefresh();
+  });
+}
+
 export default apiService;
