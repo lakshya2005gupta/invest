@@ -145,17 +145,6 @@ const Header = () => {
 
             {/* Right Side Actions */}
             <div className="flex items-center space-x-4">
-              {/* Refresh Button */}
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="flex items-center space-x-1 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors text-sm"
-                title={`Refresh data${cacheStats ? ` (${cacheStats.totalEntries} cached items)` : ''}`}
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
-
               {/* Wallet Connect Button */}
               <WalletButton />
 
