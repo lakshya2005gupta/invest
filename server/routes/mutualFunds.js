@@ -2,25 +2,14 @@ const express = require('express');
 const router = express.Router();
 const mutualFundsData = require('../data/mutualFundsData');
 const amfiService = require('../services/amfiService');
-const priceUpdateService = require('../services/priceUpdateService');
 
-// Get all mutual funds with smart caching
-router.get('/', async (req, res) => {
+// Get all mutual funds
+router.get('/', (req, res) => {
   try {
-    const forceRefresh = req.query.refresh === 'true';
-    
-    let funds;
-    if (forceRefresh) {
-      console.log('Force refresh requested for mutual funds');
-      funds = await priceUpdateService.updateMutualFundNAVs(true);
-    } else {
-      funds = await priceUpdateService.getCachedData('mutualFunds');
-    }
-
+    const funds = mutualFundsData.getMutualFunds();
     res.json({
       success: true,
       data: funds,
-      cached: !forceRefresh,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -94,27 +83,6 @@ router.get('/nav/:schemeCode', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching NAV',
-      error: error.message
-    });
-  }
-});
-
-// Force refresh mutual funds
-router.post('/refresh', async (req, res) => {
-  try {
-    console.log('Manual mutual funds refresh triggered');
-    const funds = await priceUpdateService.updateMutualFundNAVs(true);
-    
-    res.json({
-      success: true,
-      data: funds,
-      message: 'Mutual funds data refreshed successfully',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error refreshing mutual funds',
       error: error.message
     });
   }

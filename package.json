@@ -17,9 +17,6 @@
     "recharts": "^2.12.7",
     "@aptos-labs/wallet-adapter-react": "^3.0.0",
     "@aptos-labs/wallet-adapter-ant-design": "^2.0.0",
-    "@aptos-labs/wallet-adapter-petra-plugin": "^0.3.0",
-    "@aptos-labs/wallet-adapter-martian-plugin": "^0.0.4",
-    "@aptos-labs/wallet-adapter-pontem-plugin": "^0.1.7",
     "aptos": "^1.21.0"
   },
   "devDependencies": {

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Search, User, Menu, X, TrendingUp, PieChart, BarChart3, Wallet, Building2, Coins } from 'lucide-react';
-import WalletConnection from './WalletConnection';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -68,7 +67,9 @@ const Header = () => {
             </div>
 
             {/* Wallet Connect Button */}
-            <WalletConnection />
+            <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-sm">
+              Connect Wallet
+            </button>
 
             {/* Profile Dropdown */}
             <div className="relative">
