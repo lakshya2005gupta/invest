@@ -46,7 +46,7 @@ interface DividendDistribution {
 class AptosService {
   private client: AptosClient;
   private faucetClient: FaucetClient;
-  private readonly moduleAddress = '0x1'; // Replace with actual deployed address
+  private readonly moduleAddress = '0x277eb3eedde987fcef226bdee5409e2ec819da7e8ab305c8ce856eafa3a3dbc8';
   private readonly nodeUrl = 'https://fullnode.testnet.aptoslabs.com/v1';
   private readonly faucetUrl = 'https://faucet.testnet.aptoslabs.com';
 
