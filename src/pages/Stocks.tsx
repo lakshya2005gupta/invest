@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Search, Filter, TrendingUp, TrendingDown, Star } from 'lucide-react';
+import { Search, Filter, TrendingUp, TrendingDown, Star, Plus } from 'lucide-react';
 import { useStocks } from '../hooks/useApi';
+import InvestmentModal from '../components/InvestmentModal';
 
 const Stocks = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStock, setSelectedStock] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: stocks, loading, error } = useStocks();
 
   const tabs = [
@@ -18,6 +21,16 @@ const Stocks = () => {
     stock.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     stock.symbol.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  const handleBuyClick = (stock: any) => {
+    setSelectedStock({
+      name: stock.name,
+      type: 'stock' as const,
+      price: stock.price,
+      symbol: stock.symbol
+    });
+    setIsModalOpen(true);
+  };
 
   if (loading) {
     return (
@@ -53,6 +66,46 @@ const Stocks = () => {
         <p className="text-gray-600">
           Invest in stocks with zero brokerage fees and real-time market data
         </p>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl">
+          <div className="flex items-center space-x-3">
+            <TrendingUp className="h-8 w-8" />
+            <div>
+              <div className="text-2xl font-bold">₹0</div>
+              <div className="text-green-100">Brokerage Fee</div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl">
+          <div className="flex items-center space-x-3">
+            <Star className="h-8 w-8" />
+            <div>
+              <div className="text-2xl font-bold">500+</div>
+              <div className="text-blue-100">Listed Stocks</div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-xl">
+          <div className="flex items-center space-x-3">
+            <Plus className="h-8 w-8" />
+            <div>
+              <div className="text-2xl font-bold">Real-time</div>
+              <div className="text-purple-100">Market Data</div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-xl">
+          <div className="flex items-center space-x-3">
+            <Filter className="h-8 w-8" />
+            <div>
+              <div className="text-2xl font-bold">₹1</div>
+              <div className="text-orange-100">Minimum Investment</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -140,7 +193,10 @@ const Stocks = () => {
                       <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <Star className="h-4 w-4 text-gray-400 hover:text-yellow-500" />
                       </button>
-                      <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                      <button 
+                        onClick={() => handleBuyClick(stock)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                      >
                         Buy
                       </button>
                     </div>
@@ -151,6 +207,18 @@ const Stocks = () => {
           </table>
         </div>
       </div>
+
+      {/* Investment Modal */}
+      {selectedStock && (
+        <InvestmentModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedStock(null);
+          }}
+          investment={selectedStock}
+        />
+      )}
     </div>
   );
 };

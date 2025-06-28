@@ -1,96 +1,14 @@
 import React, { useState } from 'react';
-import { Search, Filter, Coins, TrendingUp, Users, Calendar, Shield, Zap } from 'lucide-react';
+import { Search, Filter, Coins, TrendingUp, Users, Calendar, Shield, Zap, Plus } from 'lucide-react';
+import { usePreIPO } from '../hooks/useApi';
+import InvestmentModal from '../components/InvestmentModal';
 
 const PreIPO = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('all');
-
-  const preIPOCompanies = [
-    {
-      name: 'ByteDance',
-      sector: 'Technology',
-      valuation: '$140B',
-      minInvestment: '$1,000',
-      expectedIPO: 'Q2 2024',
-      description: 'Parent company of TikTok and other social media platforms',
-      tokenPrice: '$50',
-      totalTokens: '2.8B',
-      availableTokens: '50M',
-      investors: 15420,
-      growth: '+25%',
-      logo: 'BD'
-    },
-    {
-      name: 'SpaceX',
-      sector: 'Aerospace',
-      valuation: '$180B',
-      minInvestment: '$2,500',
-      expectedIPO: 'Q4 2024',
-      description: 'Private space exploration and satellite internet company',
-      tokenPrice: '$125',
-      totalTokens: '1.44B',
-      availableTokens: '20M',
-      investors: 8750,
-      growth: '+45%',
-      logo: 'SX'
-    },
-    {
-      name: 'Stripe',
-      sector: 'Fintech',
-      valuation: '$95B',
-      minInvestment: '$500',
-      expectedIPO: 'Q1 2024',
-      description: 'Online payment processing platform for businesses',
-      tokenPrice: '$75',
-      totalTokens: '1.27B',
-      availableTokens: '30M',
-      investors: 12300,
-      growth: '+18%',
-      logo: 'ST'
-    },
-    {
-      name: 'Discord',
-      sector: 'Technology',
-      valuation: '$15B',
-      minInvestment: '$250',
-      expectedIPO: 'Q3 2024',
-      description: 'Voice, video and text communication service for communities',
-      tokenPrice: '$25',
-      totalTokens: '600M',
-      availableTokens: '40M',
-      investors: 22100,
-      growth: '+32%',
-      logo: 'DC'
-    },
-    {
-      name: 'Canva',
-      sector: 'Technology',
-      valuation: '$40B',
-      minInvestment: '$300',
-      expectedIPO: 'Q2 2024',
-      description: 'Online graphic design platform with drag-and-drop interface',
-      tokenPrice: '$35',
-      totalTokens: '1.14B',
-      availableTokens: '25M',
-      investors: 18600,
-      growth: '+28%',
-      logo: 'CV'
-    },
-    {
-      name: 'Databricks',
-      sector: 'Technology',
-      valuation: '$43B',
-      minInvestment: '$1,000',
-      expectedIPO: 'Q1 2024',
-      description: 'Data analytics platform for big data and machine learning',
-      tokenPrice: '$85',
-      totalTokens: '506M',
-      availableTokens: '15M',
-      investors: 6800,
-      growth: '+22%',
-      logo: 'DB'
-    }
-  ];
+  const [selectedCompany, setSelectedCompany] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: preIPOCompanies, loading, error } = usePreIPO();
 
   const sectors = [
     { id: 'all', name: 'All Sectors' },
@@ -100,13 +18,49 @@ const PreIPO = () => {
     { id: 'healthcare', name: 'Healthcare' },
   ];
 
-  const filteredCompanies = preIPOCompanies.filter(company => {
+  const handleInvestClick = (company: any) => {
+    setSelectedCompany({
+      name: company.name,
+      type: 'pre-ipo' as const,
+      tokenPrice: company.tokenPrice,
+      minInvestment: parseFloat(company.minInvestment.replace(/[$,]/g, ''))
+    });
+    setIsModalOpen(true);
+  };
+
+  const filteredCompanies = preIPOCompanies?.filter((company: any) => {
     const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          company.sector.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSector = selectedSector === 'all' || 
                          company.sector.toLowerCase() === selectedSector.toLowerCase();
     return matchesSearch && matchesSector;
-  });
+  }) || [];
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-96 mb-8"></div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-64 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center text-red-600">
+          <p>Error loading Pre-IPO data. Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -124,7 +78,7 @@ const PreIPO = () => {
           <div className="flex items-center space-x-3">
             <Coins className="h-8 w-8" />
             <div>
-              <div className="text-2xl font-bold">6</div>
+              <div className="text-2xl font-bold">{filteredCompanies.length}</div>
               <div className="text-purple-100">Available Companies</div>
             </div>
           </div>
@@ -183,7 +137,7 @@ const PreIPO = () => {
 
       {/* Companies Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {filteredCompanies.map((company, index) => (
+        {filteredCompanies.map((company: any, index: number) => (
           <div key={index} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -210,7 +164,7 @@ const PreIPO = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Token Price</span>
-                  <span className="font-semibold text-purple-600">{company.tokenPrice}</span>
+                  <span className="font-semibold text-purple-600">${company.tokenPrice}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Min Investment</span>
@@ -233,8 +187,11 @@ const PreIPO = () => {
                 </div>
               </div>
 
-              <button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200 flex items-center justify-center space-x-2">
-                <Coins className="h-4 w-4" />
+              <button 
+                onClick={() => handleInvestClick(company)}
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200 flex items-center justify-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
                 <span>Invest Now</span>
               </button>
             </div>
@@ -276,6 +233,18 @@ const PreIPO = () => {
           </div>
         </div>
       </div>
+
+      {/* Investment Modal */}
+      {selectedCompany && (
+        <InvestmentModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedCompany(null);
+          }}
+          investment={selectedCompany}
+        />
+      )}
     </div>
   );
 };

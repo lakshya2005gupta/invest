@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
-import { Search, Filter, TrendingUp, Star, Target } from 'lucide-react';
+import { Search, Filter, TrendingUp, Star, Target, Plus } from 'lucide-react';
+import { useMutualFunds } from '../hooks/useApi';
+import InvestmentModal from '../components/InvestmentModal';
 
 const MutualFunds = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-
-  const mutualFunds = [
-    { name: 'Axis Bluechip Fund', category: 'Large Cap', nav: '65.48', change: '+1.2%', returns1y: '18.5%', returns3y: '15.2%', rating: 5, aum: '15,420 Cr' },
-    { name: 'Mirae Asset Large Cap Fund', category: 'Large Cap', nav: '112.85', change: '+0.8%', returns1y: '16.8%', returns3y: '14.5%', rating: 4, aum: '12,850 Cr' },
-    { name: 'SBI Small Cap Fund', category: 'Small Cap', nav: '185.62', change: '+2.1%', returns1y: '25.4%', returns3y: '22.8%', rating: 5, aum: '8,640 Cr' },
-    { name: 'HDFC Mid-Cap Opportunities', category: 'Mid Cap', nav: '148.96', change: '+1.5%', returns1y: '21.2%', returns3y: '18.6%', rating: 4, aum: '18,520 Cr' },
-    { name: 'Parag Parikh Flexi Cap', category: 'Flexi Cap', nav: '78.42', change: '+0.9%', returns1y: '19.8%', returns3y: '16.9%', rating: 5, aum: '22,140 Cr' },
-    { name: 'UTI Nifty Index Fund', category: 'Index', nav: '24.85', change: '+1.0%', returns1y: '17.2%', returns3y: '14.8%', rating: 4, aum: '9,850 Cr' },
-  ];
+  const [selectedFund, setSelectedFund] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: mutualFunds, loading, error } = useMutualFunds();
 
   const categories = [
     { id: 'all', name: 'All Funds' },
@@ -31,10 +27,46 @@ const MutualFunds = () => {
     ));
   };
 
-  const filteredFunds = mutualFunds.filter(fund => 
+  const handleInvestClick = (fund: any) => {
+    setSelectedFund({
+      name: fund.name,
+      type: 'mutual-fund' as const,
+      nav: fund.nav,
+      minSip: fund.minSip || 100
+    });
+    setIsModalOpen(true);
+  };
+
+  const filteredFunds = mutualFunds?.filter((fund: any) => 
     fund.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     fund.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) || [];
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-96 mb-8"></div>
+          <div className="space-y-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center text-red-600">
+          <p>Error loading mutual funds data. Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -128,7 +160,7 @@ const MutualFunds = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredFunds.map((fund, index) => (
+              {filteredFunds.map((fund: any, index: number) => (
                 <tr key={index} className="hover:bg-gray-50 transition-colors cursor-pointer">
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
@@ -143,7 +175,9 @@ const MutualFunds = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="font-semibold text-gray-900">₹{fund.nav}</div>
-                    <div className="text-sm text-green-600">{fund.change}</div>
+                    <div className={`text-sm ${fund.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {fund.changePercent}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <span className="text-green-600 font-semibold">{fund.returns1y}</span>
@@ -161,8 +195,12 @@ const MutualFunds = () => {
                   </td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center space-x-2">
-                      <button className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors">
-                        Start SIP
+                      <button 
+                        onClick={() => handleInvestClick(fund)}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center space-x-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        <span>Start SIP</span>
                       </button>
                     </div>
                   </td>
@@ -172,6 +210,18 @@ const MutualFunds = () => {
           </table>
         </div>
       </div>
+
+      {/* Investment Modal */}
+      {selectedFund && (
+        <InvestmentModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedFund(null);
+          }}
+          investment={selectedFund}
+        />
+      )}
     </div>
   );
 };
