@@ -24,27 +24,38 @@ class ApiService {
     }
   }
 
-  // Stocks API
-  async getStocks() {
-    return this.request('/stocks');
+  // Stocks API with caching
+  async getStocks(forceRefresh = false) {
+    const endpoint = forceRefresh ? '/stocks?refresh=true' : '/stocks';
+    return this.request(endpoint);
   }
 
   async getStock(id: number) {
     return this.request(`/stocks/${id}`);
   }
 
-  // Mutual Funds API
-  async getMutualFunds() {
-    return this.request('/mutual-funds');
+  async refreshStocks() {
+    return this.request('/stocks/refresh', { method: 'POST' });
+  }
+
+  // Mutual Funds API with caching
+  async getMutualFunds(forceRefresh = false) {
+    const endpoint = forceRefresh ? '/mutual-funds?refresh=true' : '/mutual-funds';
+    return this.request(endpoint);
   }
 
   async getMutualFund(id: number) {
     return this.request(`/mutual-funds/${id}`);
   }
 
+  async refreshMutualFunds() {
+    return this.request('/mutual-funds/refresh', { method: 'POST' });
+  }
+
   // ETFs API
-  async getETFs() {
-    return this.request('/etfs');
+  async getETFs(forceRefresh = false) {
+    const endpoint = forceRefresh ? '/etfs?refresh=true' : '/etfs';
+    return this.request(endpoint);
   }
 
   // Bank Deposits API
@@ -60,9 +71,10 @@ class ApiService {
     return this.request('/bank-deposits/rd');
   }
 
-  // Pre-IPO API
-  async getPreIPOCompanies() {
-    return this.request('/pre-ipo');
+  // Pre-IPO API with caching
+  async getPreIPOCompanies(forceRefresh = false) {
+    const endpoint = forceRefresh ? '/pre-ipo?refresh=true' : '/pre-ipo';
+    return this.request(endpoint);
   }
 
   async getPreIPOCompany(id: number) {
@@ -76,9 +88,19 @@ class ApiService {
     });
   }
 
-  // Market Indices API
-  async getMarketIndices() {
-    return this.request('/market-indices');
+  // Market Indices API with caching
+  async getMarketIndices(forceRefresh = false) {
+    const endpoint = forceRefresh ? '/market-indices?refresh=true' : '/market-indices';
+    return this.request(endpoint);
+  }
+
+  async refreshMarketIndices() {
+    return this.request('/market-indices/refresh', { method: 'POST' });
+  }
+
+  // Cache status
+  async getCacheStatus() {
+    return this.request('/market-indices/status/cache');
   }
 
   // Portfolio API
