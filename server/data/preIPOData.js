@@ -1,14 +1,14 @@
-// In-memory Pre-IPO database
+// In-memory Pre-IPO database with reduced prices for affordability
 let preIPODB = [
   {
     id: 1,
     name: 'ByteDance',
     sector: 'Technology',
     valuation: '$140B',
-    minInvestment: '$1,000',
+    minInvestment: '$10', // Reduced from $1,000 to $10
     expectedIPO: 'Q2 2024',
     description: 'Parent company of TikTok and other social media platforms',
-    tokenPrice: 50,
+    tokenPrice: 0.50, // Reduced from 50 to 0.50
     totalTokens: '2.8B',
     availableTokens: '50M',
     investors: 15420,
@@ -24,10 +24,10 @@ let preIPODB = [
     name: 'SpaceX',
     sector: 'Aerospace',
     valuation: '$180B',
-    minInvestment: '$2,500',
+    minInvestment: '$25', // Reduced from $2,500 to $25
     expectedIPO: 'Q4 2024',
     description: 'Private space exploration and satellite internet company',
-    tokenPrice: 125,
+    tokenPrice: 1.25, // Reduced from 125 to 1.25
     totalTokens: '1.44B',
     availableTokens: '20M',
     investors: 8750,
@@ -43,10 +43,10 @@ let preIPODB = [
     name: 'Stripe',
     sector: 'Fintech',
     valuation: '$95B',
-    minInvestment: '$500',
+    minInvestment: '$5', // Reduced from $500 to $5
     expectedIPO: 'Q1 2024',
     description: 'Online payment processing platform for businesses',
-    tokenPrice: 75,
+    tokenPrice: 0.75, // Reduced from 75 to 0.75
     totalTokens: '1.27B',
     availableTokens: '30M',
     investors: 12300,
@@ -62,10 +62,10 @@ let preIPODB = [
     name: 'Discord',
     sector: 'Technology',
     valuation: '$15B',
-    minInvestment: '$250',
+    minInvestment: '$2.50', // Reduced from $250 to $2.50
     expectedIPO: 'Q3 2024',
     description: 'Voice, video and text communication service for communities',
-    tokenPrice: 25,
+    tokenPrice: 0.25, // Reduced from 25 to 0.25
     totalTokens: '600M',
     availableTokens: '40M',
     investors: 22100,
@@ -81,10 +81,10 @@ let preIPODB = [
     name: 'Canva',
     sector: 'Technology',
     valuation: '$40B',
-    minInvestment: '$300',
+    minInvestment: '$3', // Reduced from $300 to $3
     expectedIPO: 'Q2 2024',
     description: 'Online graphic design platform with drag-and-drop interface',
-    tokenPrice: 35,
+    tokenPrice: 0.35, // Reduced from 35 to 0.35
     totalTokens: '1.14B',
     availableTokens: '25M',
     investors: 18600,
@@ -100,10 +100,10 @@ let preIPODB = [
     name: 'Databricks',
     sector: 'Technology',
     valuation: '$43B',
-    minInvestment: '$1,000',
+    minInvestment: '$10', // Reduced from $1,000 to $10
     expectedIPO: 'Q1 2024',
     description: 'Data analytics platform for big data and machine learning',
-    tokenPrice: 85,
+    tokenPrice: 0.85, // Reduced from 85 to 0.85
     totalTokens: '506M',
     availableTokens: '15M',
     investors: 6800,
