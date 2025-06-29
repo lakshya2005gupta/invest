@@ -98,7 +98,7 @@ const PreIPOInvestmentModal: React.FC<PreIPOInvestmentModalProps> = ({ isOpen, o
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Total Amount:</span>
-              <span className="font-medium">${investmentSuccess.totalAmount}</span>
+              <span className="font-medium">${investmentSuccess.totalAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Transaction Hash:</span>
@@ -145,7 +145,7 @@ const PreIPOInvestmentModal: React.FC<PreIPOInvestmentModalProps> = ({ isOpen, o
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-gray-500">Token Price</span>
-              <div className="font-semibold text-lg">${company.tokenPrice}</div>
+              <div className="font-semibold text-lg">${company.tokenPrice.toFixed(2)}</div>
             </div>
             <div>
               <span className="text-gray-500">Valuation</span>
@@ -208,9 +208,9 @@ const PreIPOInvestmentModal: React.FC<PreIPOInvestmentModalProps> = ({ isOpen, o
               )}
             </div>
 
-            {/* Quick Amount Buttons */}
+            {/* Quick Amount Buttons - Updated for new prices */}
             <div className="grid grid-cols-3 gap-2">
-              {[minTokens, minTokens * 2, minTokens * 5].map((amount) => (
+              {[minTokens, minTokens * 5, minTokens * 10].map((amount) => (
                 <button
                   key={amount}
                   onClick={() => setTokens(amount.toString())}
@@ -264,6 +264,17 @@ const PreIPOInvestmentModal: React.FC<PreIPOInvestmentModalProps> = ({ isOpen, o
                   <li>• Instant settlement and confirmation</li>
                 </ul>
               </div>
+            </div>
+          </div>
+
+          {/* Affordability Notice */}
+          <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+            <div className="text-sm text-green-800">
+              <p className="font-medium">💡 Affordable Investment</p>
+              <p className="text-xs mt-1">
+                Start investing in Pre-IPO companies with as little as {company.minInvestment}. 
+                Build your portfolio gradually with small, affordable investments.
+              </p>
             </div>
           </div>
 
