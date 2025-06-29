@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { aptosService } from '../services/aptosService';
 
 interface WalletState {
   connected: boolean;
@@ -47,30 +46,81 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     
     // Listen for wallet events
     if (typeof window !== 'undefined') {
-      window.addEventListener('aptos:connect', handleWalletConnect);
-      window.addEventListener('aptos:disconnect', handleWalletDisconnect);
-      window.addEventListener('aptos:accountChanged', handleAccountChanged);
-      window.addEventListener('aptos:networkChanged', handleNetworkChanged);
+      // Petra wallet events
+      window.addEventListener('petra_accountChanged', handleAccountChanged);
+      window.addEventListener('petra_networkChanged', handleNetworkChanged);
+      
+      // Martian wallet events
+      window.addEventListener('martian_accountChanged', handleAccountChanged);
+      window.addEventListener('martian_networkChanged', handleNetworkChanged);
       
       return () => {
-        window.removeEventListener('aptos:connect', handleWalletConnect);
-        window.removeEventListener('aptos:disconnect', handleWalletDisconnect);
-        window.removeEventListener('aptos:accountChanged', handleAccountChanged);
-        window.removeEventListener('aptos:networkChanged', handleNetworkChanged);
+        window.removeEventListener('petra_accountChanged', handleAccountChanged);
+        window.removeEventListener('petra_networkChanged', handleNetworkChanged);
+        window.removeEventListener('martian_accountChanged', handleAccountChanged);
+        window.removeEventListener('martian_networkChanged', handleNetworkChanged);
       };
     }
   }, []);
 
   const checkWalletConnection = async () => {
     try {
-      // Check multiple wallet types
-      const wallets = ['aptos', 'petra', 'martian', 'pontem', 'fewcha'];
-      
+      // Check Petra wallet
+      if (typeof window !== 'undefined' && (window as any).aptos) {
+        try {
+          const isConnected = await (window as any).aptos.isConnected();
+          if (isConnected) {
+            const account = await (window as any).aptos.account();
+            const network = await (window as any).aptos.network();
+            const balance = await getWalletBalance(account.address);
+            
+            setWallet({
+              connected: true,
+              address: account.address,
+              balance,
+              network: network.name || 'testnet',
+              connecting: false,
+              publicKey: account.publicKey,
+              walletName: 'petra',
+            });
+            return;
+          }
+        } catch (error) {
+          console.log('Petra wallet not connected');
+        }
+      }
+
+      // Check Martian wallet
+      if (typeof window !== 'undefined' && (window as any).martian) {
+        try {
+          const isConnected = await (window as any).martian.isConnected();
+          if (isConnected) {
+            const account = await (window as any).martian.account();
+            const network = await (window as any).martian.network();
+            const balance = await getWalletBalance(account.address);
+            
+            setWallet({
+              connected: true,
+              address: account.address,
+              balance,
+              network: network.name || 'testnet',
+              connecting: false,
+              publicKey: account.publicKey,
+              walletName: 'martian',
+            });
+            return;
+          }
+        } catch (error) {
+          console.log('Martian wallet not connected');
+        }
+      }
+
+      // Check other wallets
+      const wallets = ['pontem', 'fewcha'];
       for (const walletName of wallets) {
         if (typeof window !== 'undefined' && (window as any)[walletName]) {
-          const walletAPI = (window as any)[walletName];
-          
           try {
+            const walletAPI = (window as any)[walletName];
             const isConnected = await walletAPI.isConnected();
             if (isConnected) {
               const account = await walletAPI.account();
@@ -112,12 +162,39 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         ? preferredWallet 
         : availableWallets[0];
 
-      const walletAPI = (window as any)[walletToUse];
+      let walletAPI;
+      let walletName = walletToUse;
+
+      // Get the correct wallet API
+      if (walletToUse === 'petra' || walletToUse === 'aptos') {
+        walletAPI = (window as any).aptos;
+        walletName = 'petra';
+      } else {
+        walletAPI = (window as any)[walletToUse];
+      }
+
+      if (!walletAPI) {
+        throw new Error(`${walletToUse} wallet not found`);
+      }
 
       // Request connection
       const response = await walletAPI.connect();
+      console.log('Wallet connection response:', response);
+
+      // Get account info
       const account = await walletAPI.account();
-      const network = await walletAPI.network();
+      console.log('Account info:', account);
+
+      // Get network info
+      let network;
+      try {
+        network = await walletAPI.network();
+      } catch (error) {
+        console.log('Could not get network, defaulting to testnet');
+        network = { name: 'testnet' };
+      }
+
+      // Get balance
       const balance = await getWalletBalance(account.address);
 
       setWallet({
@@ -127,10 +204,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         network: network.name || 'testnet',
         connecting: false,
         publicKey: account.publicKey,
-        walletName: walletToUse,
+        walletName,
       });
 
-      console.log(`${walletToUse} wallet connected:`, account.address);
+      console.log(`${walletName} wallet connected:`, account.address);
     } catch (error) {
       console.error('Error connecting wallet:', error);
       setWallet(prev => ({ ...prev, connecting: false }));
@@ -140,8 +217,17 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   const disconnectWallet = async () => {
     try {
-      if (wallet.walletName && (window as any)[wallet.walletName]) {
-        await (window as any)[wallet.walletName].disconnect();
+      if (wallet.walletName && wallet.connected) {
+        let walletAPI;
+        if (wallet.walletName === 'petra') {
+          walletAPI = (window as any).aptos;
+        } else {
+          walletAPI = (window as any)[wallet.walletName];
+        }
+
+        if (walletAPI && walletAPI.disconnect) {
+          await walletAPI.disconnect();
+        }
       }
       
       setWallet({
@@ -162,12 +248,24 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   const signTransaction = async (transaction: any): Promise<string> => {
     try {
-      if (!wallet.connected || !wallet.walletName || !(window as any)[wallet.walletName]) {
+      if (!wallet.connected || !wallet.walletName) {
         throw new Error('Wallet not connected');
       }
 
-      const walletAPI = (window as any)[wallet.walletName];
+      let walletAPI;
+      if (wallet.walletName === 'petra') {
+        walletAPI = (window as any).aptos;
+      } else {
+        walletAPI = (window as any)[wallet.walletName];
+      }
+
+      if (!walletAPI) {
+        throw new Error('Wallet API not found');
+      }
+
       const response = await walletAPI.signAndSubmitTransaction(transaction);
+      console.log('Transaction response:', response);
+      
       return response.hash;
     } catch (error) {
       console.error('Error signing transaction:', error);
@@ -177,11 +275,21 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   const signMessage = async (message: string): Promise<string> => {
     try {
-      if (!wallet.connected || !wallet.walletName || !(window as any)[wallet.walletName]) {
+      if (!wallet.connected || !wallet.walletName) {
         throw new Error('Wallet not connected');
       }
 
-      const walletAPI = (window as any)[wallet.walletName];
+      let walletAPI;
+      if (wallet.walletName === 'petra') {
+        walletAPI = (window as any).aptos;
+      } else {
+        walletAPI = (window as any)[wallet.walletName];
+      }
+
+      if (!walletAPI) {
+        throw new Error('Wallet API not found');
+      }
+
       const response = await walletAPI.signMessage({
         message,
         nonce: Math.random().toString(),
@@ -195,12 +303,24 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   const switchNetwork = async (network: string) => {
     try {
-      if (!wallet.connected || !wallet.walletName || !(window as any)[wallet.walletName]) {
+      if (!wallet.connected || !wallet.walletName) {
         throw new Error('Wallet not connected');
       }
 
-      const walletAPI = (window as any)[wallet.walletName];
-      await walletAPI.changeNetwork({ name: network });
+      let walletAPI;
+      if (wallet.walletName === 'petra') {
+        walletAPI = (window as any).aptos;
+      } else {
+        walletAPI = (window as any)[wallet.walletName];
+      }
+
+      if (!walletAPI) {
+        throw new Error('Wallet API not found');
+      }
+
+      if (walletAPI.changeNetwork) {
+        await walletAPI.changeNetwork({ name: network });
+      }
       
       setWallet(prev => ({ ...prev, network }));
     } catch (error) {
@@ -214,7 +334,47 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       const targetAddress = address || wallet.address;
       if (!targetAddress) return 0;
 
-      return await aptosService.getAccountBalance(targetAddress);
+      // Use the connected wallet's API to get balance
+      let walletAPI;
+      if (wallet.walletName === 'petra' || !wallet.walletName) {
+        walletAPI = (window as any).aptos;
+      } else {
+        walletAPI = (window as any)[wallet.walletName];
+      }
+
+      if (walletAPI && walletAPI.getAccountResources) {
+        try {
+          const resources = await walletAPI.getAccountResources(targetAddress);
+          const coinResource = resources.find(
+            (r: any) => r.type === '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>'
+          );
+          
+          if (coinResource) {
+            const balance = coinResource.data.coin.value;
+            return parseInt(balance) / 100000000; // Convert from octas to APT
+          }
+        } catch (error) {
+          console.log('Error getting balance from wallet API, trying direct fetch');
+        }
+      }
+
+      // Fallback to direct API call
+      const response = await fetch(`https://fullnode.testnet.aptoslabs.com/v1/accounts/${targetAddress}/resources`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const resources = await response.json();
+      const coinResource = resources.find(
+        (r: any) => r.type === '0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>'
+      );
+      
+      if (coinResource) {
+        const balance = coinResource.data.coin.value;
+        return parseInt(balance) / 100000000; // Convert from octas to APT
+      }
+
+      return 0;
     } catch (error) {
       console.error('Error fetching balance:', error);
       return 0;
@@ -233,8 +393,30 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         throw new Error('Wallet not connected');
       }
 
-      await aptosService.fundAccount(wallet.address);
-      await getBalance(); // Refresh balance
+      if (wallet.network !== 'testnet') {
+        throw new Error('Faucet is only available on testnet');
+      }
+
+      const response = await fetch('https://faucet.testnet.aptoslabs.com/mint', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: wallet.address,
+          amount: 100000000, // 1 APT in octas
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Faucet request failed: ${response.status}`);
+      }
+
+      // Wait a bit for the transaction to be processed
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Refresh balance
+      await getBalance();
     } catch (error) {
       console.error('Error funding account:', error);
       throw error;
@@ -242,35 +424,29 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   };
 
   const isWalletInstalled = (walletName: string): boolean => {
-    return typeof window !== 'undefined' && !!(window as any)[walletName];
+    if (typeof window === 'undefined') return false;
+    
+    if (walletName === 'petra' || walletName === 'aptos') {
+      return !!(window as any).aptos;
+    }
+    
+    return !!(window as any)[walletName];
   };
 
   const getAvailableWallets = (): string[] => {
     if (typeof window === 'undefined') return [];
     
-    const wallets = ['aptos', 'petra', 'martian', 'pontem', 'fewcha'];
-    return wallets.filter(wallet => (window as any)[wallet]);
+    const wallets = [];
+    
+    if ((window as any).aptos) wallets.push('petra');
+    if ((window as any).martian) wallets.push('martian');
+    if ((window as any).pontem) wallets.push('pontem');
+    if ((window as any).fewcha) wallets.push('fewcha');
+    
+    return wallets;
   };
 
   // Event handlers
-  const handleWalletConnect = (event: any) => {
-    console.log('Wallet connected event:', event);
-    checkWalletConnection();
-  };
-
-  const handleWalletDisconnect = () => {
-    console.log('Wallet disconnected event');
-    setWallet({
-      connected: false,
-      address: null,
-      balance: 0,
-      network: 'testnet',
-      connecting: false,
-      publicKey: null,
-      walletName: null,
-    });
-  };
-
   const handleAccountChanged = (event: any) => {
     console.log('Account changed event:', event);
     checkWalletConnection();
