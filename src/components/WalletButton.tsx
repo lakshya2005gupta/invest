@@ -23,17 +23,16 @@ const WalletButton = () => {
   const availableWallets = getAvailableWallets();
 
   const walletInfo = {
-    aptos: { name: 'Aptos Wallet', icon: '🔷' },
-    petra: { name: 'Petra Wallet', icon: '🪨' },
-    martian: { name: 'Martian Wallet', icon: '👽' },
-    pontem: { name: 'Pontem Wallet', icon: '🌉' },
-    fewcha: { name: 'Fewcha Wallet', icon: '🦊' },
+    petra: { name: 'Petra Wallet', icon: '🪨', installUrl: 'https://petra.app/' },
+    martian: { name: 'Martian Wallet', icon: '👽', installUrl: 'https://martianwallet.xyz/' },
+    pontem: { name: 'Pontem Wallet', icon: '🌉', installUrl: 'https://pontem.network/wallet' },
+    fewcha: { name: 'Fewcha Wallet', icon: '🦊', installUrl: 'https://fewcha.app/' },
   };
 
   const handleConnect = async (walletName?: string) => {
     try {
       if (availableWallets.length === 0) {
-        alert('No Aptos wallet found. Please install Petra, Martian, Pontem, or Fewcha wallet.');
+        setShowWalletSelector(true);
         return;
       }
 
@@ -69,8 +68,13 @@ const WalletButton = () => {
 
   const refreshBalance = async () => {
     setRefreshing(true);
-    await getBalance();
-    setRefreshing(false);
+    try {
+      await getBalance();
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleFundAccount = async () => {
@@ -83,7 +87,9 @@ const WalletButton = () => {
     try {
       await fundAccount();
       alert('Account funded successfully! 1 APT added to your wallet.');
+      await refreshBalance();
     } catch (error) {
+      console.error('Funding error:', error);
       alert('Failed to fund account. Please try again later.');
     } finally {
       setFunding(false);
@@ -98,24 +104,53 @@ const WalletButton = () => {
     }
   };
 
+  const handleInstallWallet = (walletName: string) => {
+    const wallet = walletInfo[walletName as keyof typeof walletInfo];
+    if (wallet?.installUrl) {
+      window.open(wallet.installUrl, '_blank');
+    }
+  };
+
   // Wallet Selector Modal
   if (showWalletSelector) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Wallet</h3>
-          <div className="space-y-3">
-            {availableWallets.map(walletName => (
-              <button
-                key={walletName}
-                onClick={() => handleConnect(walletName)}
-                className="w-full flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
-              >
-                <span className="text-2xl">{walletInfo[walletName as keyof typeof walletInfo]?.icon}</span>
-                <span className="font-medium">{walletInfo[walletName as keyof typeof walletInfo]?.name}</span>
-              </button>
-            ))}
-          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Connect Wallet</h3>
+          
+          {availableWallets.length > 0 ? (
+            <div className="space-y-3 mb-4">
+              <p className="text-sm text-gray-600">Choose a wallet to connect:</p>
+              {availableWallets.map(walletName => (
+                <button
+                  key={walletName}
+                  onClick={() => handleConnect(walletName)}
+                  className="w-full flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                >
+                  <span className="text-2xl">{walletInfo[walletName as keyof typeof walletInfo]?.icon}</span>
+                  <span className="font-medium">{walletInfo[walletName as keyof typeof walletInfo]?.name}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3 mb-4">
+              <p className="text-sm text-gray-600 mb-3">No Aptos wallet detected. Please install one:</p>
+              {Object.entries(walletInfo).map(([walletName, info]) => (
+                <button
+                  key={walletName}
+                  onClick={() => handleInstallWallet(walletName)}
+                  className="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">{info.icon}</span>
+                    <span className="font-medium">{info.name}</span>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-gray-400" />
+                </button>
+              ))}
+            </div>
+          )}
+          
           <button
             onClick={() => setShowWalletSelector(false)}
             className="w-full mt-4 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
@@ -192,7 +227,7 @@ const WalletButton = () => {
                   <button
                     onClick={handleFundAccount}
                     disabled={funding}
-                    className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1"
+                    className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1 disabled:opacity-50"
                   >
                     <Plus className="h-3 w-3" />
                     <span>{funding ? 'Funding...' : 'Fund'}</span>
@@ -281,6 +316,14 @@ const WalletButton = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Click outside to close dropdown */}
+      {isDropdownOpen && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setIsDropdownOpen(false)}
+        />
       )}
     </div>
   );
